@@ -27,16 +27,16 @@ public class Frs {
     private static final String FILE_NAME_KEY = ";FileName=";
     private static final String MD5_SUM_KEY = ";Md5Sum=";
     private static final String DST_IP_PORT = ";Dst-Ip-Port=";
-    private static final String SERVER_PORT = ":8080";
-    private static final String FTP_PORT = ":21";
     private static final String PROTOCOL_KEY = ";protol=";
     private static final String TYPE_KEY = ";Type=";
     private static final String PROTOCOL = "ftp";
-    private static final Pattern DEALING = Pattern.compile("^success$|^2$");
     private static final String COMPLETE = "0";
-    private static final Pattern PUT_GET = Pattern.compile("^put$|^get$");
     private static final String PUT = "put";
     private static final String GET = "get";
+    private static final Pattern DEALING = Pattern.compile("^success$|^2$");
+    private static final Pattern PUT_GET = Pattern.compile("^put$|^get$");
+    private static final String SERVER_PORT = ":8080";
+    private static final String FTP_PORT = ":21";
     private static String uuid = "";
     private static String method;
     private static String fileName = "";
@@ -82,10 +82,6 @@ public class Frs {
      */
     @SneakyThrows
     private static void init(String... args) {
-        if (Monitor.getMonitorFolder().length() == 0) {
-            Monitor.setMonitorFolder(System.getProperty("user.dir"));
-        }
-
         try {
             host = args[0];
             uuid = args[1];
@@ -106,9 +102,9 @@ public class Frs {
     @SneakyThrows
     private static FileExchangeInfo put() {
         FileExchangeInfo fileExchangeInfo = new FileExchangeInfo();
-        String fileAbsolutePath = Monitor.getMonitorFolder() + File.separator + fileName.substring(fileName.lastIndexOf(File.separator) + 1);
+        String fileAbsolutePath = File.separator + fileName.substring(fileName.lastIndexOf(File.separator) + 1);
         long start = System.currentTimeMillis();
-        if ( upload(fileAbsolutePath)) {
+        if (upload(fileAbsolutePath)) {
             System.out.printf("[FTP] 上传文件到前置 - 耗时: %sms%n", System.currentTimeMillis() - start);
             md5Sum = md5(Files.readAllBytes(Paths.get(fileAbsolutePath)));
             currentMethod = "put";
@@ -289,9 +285,6 @@ public class Frs {
         private String failedReason = "";
         @JSONField(name = "unique_id")
         private String uniqueId = "";
-    }
-
-    enum KeyEnum {
     }
 
 }
