@@ -31,10 +31,12 @@ public class Frs {
     private static final String FTP_PORT = ":21";
     private static final String PROTOCOL_KEY = ";protol=";
     private static final String TYPE_KEY = ";Type=";
-    private static final String protocol = "ftp";
-    private static final Pattern dealing = Pattern.compile("^success$|^2$");
-    private static final String complete = "0";
-    private static final Pattern putGet = Pattern.compile("^put$|^get$");
+    private static final String PROTOCOL = "ftp";
+    private static final Pattern DEALING = Pattern.compile("^success$|^2$");
+    private static final String COMPLETE = "0";
+    private static final Pattern PUT_GET = Pattern.compile("^put$|^get$");
+    private static final String PUT = "put";
+    private static final String GET = "get";
     private static String uuid = "";
     private static String method;
     private static String fileName = "";
@@ -43,13 +45,10 @@ public class Frs {
     private static String currentMethod = "PUT";
     private static String lastResult = "";
 
-    private Frs() {
-    }
-
     @SneakyThrows
     public static void main(String... args) {
         if (args.length == 0) {
-            System.out.print("java -jar fileExchange.jar [front_ip] [UUID] [get|put] [file_name]\n");
+            System.out.print("java -jar frs.jar [front_ip] [UUID] [get|put] [file_name]\n");
         } else {
             long start = System.currentTimeMillis();
             run(args);
@@ -61,18 +60,18 @@ public class Frs {
     public static synchronized void run(String... args) {
         init(args);
         FileExchangeInfo fileExchangeInfo;
-        if ("put".equalsIgnoreCase(method)) {
+        if (PUT.equalsIgnoreCase(method)) {
             fileExchangeInfo = put();
-            if (null != fileExchangeInfo && dealing.matcher(fileExchangeInfo.getResult()).matches()) {
+            if (null != fileExchangeInfo && DEALING.matcher(fileExchangeInfo.getResult()).matches()) {
                 query(fileExchangeInfo);
             }
         }
-        if ("get".equalsIgnoreCase(method)) {
+        if (GET.equalsIgnoreCase(method)) {
             fileExchangeInfo = get();
-            if (null != fileExchangeInfo && dealing.matcher(fileExchangeInfo.getResult()).matches()) {
+            if (null != fileExchangeInfo && DEALING.matcher(fileExchangeInfo.getResult()).matches()) {
                 fileExchangeInfo = query(fileExchangeInfo);
             }
-            if (null != fileExchangeInfo && fileExchangeInfo.getResult().matches(complete)) {
+            if (null != fileExchangeInfo && fileExchangeInfo.getResult().matches(COMPLETE)) {
                 down();
             }
         }
@@ -91,7 +90,7 @@ public class Frs {
             host = args[0];
             uuid = args[1];
             method = args[2];
-            if (!putGet.matcher(method).matches()) {
+            if (!PUT_GET.matcher(method).matches()) {
                 System.err.print("[METHOD] 错误\n");
             }
             System.out.printf("%s%n", Arrays.toString(args));
@@ -109,7 +108,7 @@ public class Frs {
         FileExchangeInfo fileExchangeInfo = new FileExchangeInfo();
         String fileAbsolutePath = Monitor.getMonitorFolder() + File.separator + fileName.substring(fileName.lastIndexOf(File.separator) + 1);
         long start = System.currentTimeMillis();
-        if (upload(fileAbsolutePath)) {
+        if ( upload(fileAbsolutePath)) {
             System.out.printf("[FTP] 上传文件到前置 - 耗时: %sms%n", System.currentTimeMillis() - start);
             md5Sum = md5(Files.readAllBytes(Paths.get(fileAbsolutePath)));
             currentMethod = "put";
@@ -131,7 +130,7 @@ public class Frs {
 
     @SneakyThrows
     private static FileExchangeInfo query(FileExchangeInfo fileExchangeInfo) {
-        while (dealing.matcher(fileExchangeInfo.getResult()).matches()) {
+        while (DEALING.matcher(fileExchangeInfo.getResult()).matches()) {
             fileExchangeInfo = request(getHeader("query"));
         }
         return fileExchangeInfo;
@@ -146,7 +145,7 @@ public class Frs {
     }
 
     private static String getHeader(String type) {
-        return UUID_KEY + uuid + FILE_NAME_KEY + fileName + MD5_SUM_KEY + md5Sum + DST_IP_PORT + host + FTP_PORT + PROTOCOL_KEY + protocol + TYPE_KEY + type;
+        return UUID_KEY + uuid + FILE_NAME_KEY + fileName + MD5_SUM_KEY + md5Sum + DST_IP_PORT + host + FTP_PORT + PROTOCOL_KEY + PROTOCOL + TYPE_KEY + type;
     }
 
     @SneakyThrows
@@ -291,4 +290,8 @@ public class Frs {
         @JSONField(name = "unique_id")
         private String uniqueId = "";
     }
+
+    enum KeyEnum {
+    }
+
 }
