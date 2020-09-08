@@ -46,17 +46,6 @@ public class Frs {
     private static String lastResult = "";
 
     @SneakyThrows
-    public static void main(String... args) {
-        if (args.length == 0) {
-            System.out.print("java -jar frs.jar [front_ip] [UUID] [get|put] [file_name]\n");
-        } else {
-            long start = System.currentTimeMillis();
-            run(args);
-            System.out.printf("cost %sms%n", System.currentTimeMillis() - start);
-        }
-    }
-
-    @SneakyThrows
     public static synchronized void run(String... args) {
         init(args);
         FileExchangeInfo fileExchangeInfo;
