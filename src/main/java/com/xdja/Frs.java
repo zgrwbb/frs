@@ -103,7 +103,7 @@ public class Frs {
         method = "put";
         optMethod = method;
         FileExchangeInfo fileExchangeInfo = new FileExchangeInfo();
-        String fileAbsolutePath = fileName.substring(fileName.lastIndexOf(File.separator) + 1);
+        String fileAbsolutePath = "./" + fileName.substring(fileName.lastIndexOf(File.separator) + 1);
         long start = System.currentTimeMillis();
         if (upload(fileAbsolutePath)) {
             System.out.printf("[FTP] 上传文件到前置 - 耗时: %sms%n", System.currentTimeMillis() - start);
