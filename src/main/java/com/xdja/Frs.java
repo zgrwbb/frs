@@ -23,32 +23,26 @@ import java.util.regex.Pattern;
  */
 @SuppressWarnings({"java:S106", "java:S115", "java:S3740", "java:S125", "java:S1186", "java:S1192", "FieldCanBeLocal", "ResultOfMethodCallIgnored", "java:S2259"})
 public class Frs {
-    private static final String UUID_KEY = "Uuid=";
-    private static final String FILE_NAME_KEY = ";FileName=";
-    private static final String MD5_SUM_KEY = ";Md5Sum=";
-    private static final String DST_IP_PORT = ";Dst-Ip-Port=";
-    private static final String PROTOCOL_KEY = ";protol=";
-    private static final String TYPE_KEY = ";Type=";
-    private static final String PROTOCOL = "ftp";
-    private static final String COMPLETE = "0";
-    private static final String PUT = "put";
-    private static final String GET = "get";
+
     private static final Pattern DEALING = Pattern.compile("^success$|^2$");
     private static final Pattern PUT_GET = Pattern.compile("^put$|^get$");
-    private static final String SERVER_PORT = ":8080";
-    private static final String FTP_PORT = ":21";
+
+    private static String host = "localhost";
+    private static final String SERVER_PORT = "8080";
+    private static String lastResult = "";
+
+    private static String optMethod = "";
+
     private static String uuid = "";
-    private static String method;
     private static String fileName = "";
     private static String md5Sum = "";
-    private static String host = "";
-    private static String currentMethod = "PUT";
-    private static String lastResult = "";
+    private static String protocol = "ftp";
+    private static String method = "put";
 
     @SneakyThrows
     public static void main(String... args) {
         if (args.length == 0) {
-            System.out.print("java -jar frs.jar [front_ip] [UUID] [get|put] [file_name]\n");
+            System.out.print("java -jar frs.jar [front_ip] [UUID] [get|put] [file_name] [protocol]\n");
         } else {
             long start = System.currentTimeMillis();
             run(args);
@@ -60,18 +54,19 @@ public class Frs {
     public static synchronized void run(String... args) {
         init(args);
         FileExchangeInfo fileExchangeInfo;
-        if (PUT.equalsIgnoreCase(method)) {
+        final String put = "put";
+        if (put.equalsIgnoreCase(method)) {
             fileExchangeInfo = put();
             if (null != fileExchangeInfo && DEALING.matcher(fileExchangeInfo.getResult()).matches()) {
                 query(fileExchangeInfo);
             }
-        }
-        if (GET.equalsIgnoreCase(method)) {
+        } else {
             fileExchangeInfo = get();
             if (null != fileExchangeInfo && DEALING.matcher(fileExchangeInfo.getResult()).matches()) {
                 fileExchangeInfo = query(fileExchangeInfo);
             }
-            if (null != fileExchangeInfo && fileExchangeInfo.getResult().matches(COMPLETE)) {
+            final String complete = "0";
+            if (null != fileExchangeInfo && fileExchangeInfo.getResult().matches(complete)) {
                 down();
             }
         }
@@ -93,63 +88,62 @@ public class Frs {
         } catch (Exception e) {
             System.err.print("[HOST]|[UUID] 缺失\n");
         }
-        int four = 4;
-        if (args.length == four) {
+        int three = 3;
+        if (args.length > three) {
             fileName = args[3];
+        }
+        int four = 4;
+        if (args.length > four) {
+            protocol = args[4];
         }
     }
 
     @SneakyThrows
     private static FileExchangeInfo put() {
+        method = "put";
+        optMethod = method;
         FileExchangeInfo fileExchangeInfo = new FileExchangeInfo();
-        String fileAbsolutePath = File.separator + fileName.substring(fileName.lastIndexOf(File.separator) + 1);
+        String fileAbsolutePath = fileName.substring(fileName.lastIndexOf(File.separator) + 1);
         long start = System.currentTimeMillis();
         if (upload(fileAbsolutePath)) {
             System.out.printf("[FTP] 上传文件到前置 - 耗时: %sms%n", System.currentTimeMillis() - start);
             md5Sum = md5(Files.readAllBytes(Paths.get(fileAbsolutePath)));
-            currentMethod = "put";
-            start = System.currentTimeMillis();
-            fileExchangeInfo = request(getHeader(currentMethod));
-            System.out.printf("[%s] HTTP请求耗时: %sms%n", currentMethod.toUpperCase(), System.currentTimeMillis() - start);
+            fileExchangeInfo = request(getHeader(method));
         }
         return fileExchangeInfo;
     }
 
     @SneakyThrows
     private static FileExchangeInfo get() {
-        currentMethod = "get";
-        long start = System.currentTimeMillis();
-        final FileExchangeInfo request = request(getHeader(currentMethod));
-        System.out.printf("[%s] HTTP请求耗时: %sms%n", currentMethod.toUpperCase(), System.currentTimeMillis() - start);
-        return request;
+        method = "get";
+        optMethod = method;
+        return request(getHeader(method));
     }
 
     @SneakyThrows
     private static FileExchangeInfo query(FileExchangeInfo fileExchangeInfo) {
+        method = "query";
         while (DEALING.matcher(fileExchangeInfo.getResult()).matches()) {
-            fileExchangeInfo = request(getHeader("query"));
+            fileExchangeInfo = request(getHeader(method));
         }
         return fileExchangeInfo;
     }
 
     @SneakyThrows
     private static void down() {
-        currentMethod = "down";
-        long start = System.currentTimeMillis();
-        request(getHeader(currentMethod));
-        System.out.printf("[%s] HTTP请求耗时: %sms%n", currentMethod.toUpperCase(), System.currentTimeMillis() - start);
+        method = "down";
+        request(getHeader(method));
     }
 
-    private static String getHeader(String type) {
-        return UUID_KEY + uuid + FILE_NAME_KEY + fileName + MD5_SUM_KEY + md5Sum + DST_IP_PORT + host + FTP_PORT + PROTOCOL_KEY + PROTOCOL + TYPE_KEY + type;
+    private static String getHeader(String method) {
+        return String.format("Uuid=%s;FileName=%s;Md5Sum=%s;protol=%s;Type=%s", uuid, fileName, md5Sum, protocol, method);
     }
 
     @SneakyThrows
     private static FileExchangeInfo request(String header) {
-        String type = header.trim().split("Type=")[1].split(";")[0];
         String down = "down";
-        String url = "query".equals(type) ? "http://" + host + SERVER_PORT + "/query.php" : "http://" + host + SERVER_PORT + "/file_exchange.php";
-        if (down.equalsIgnoreCase(type)) {
+        String url = String.format("http://%s:%s/file_exchange.php", host, SERVER_PORT);
+        if (down.equalsIgnoreCase(method)) {
             File downFile = new File(down);
             if (!downFile.exists()) {
                 downFile.mkdirs();
@@ -171,7 +165,7 @@ public class Frs {
             String uploadResult = fileExchangeInfo.getResult();
             switch (uploadResult) {
                 case "0":
-                    System.out.printf("[%s 文件成功]%n", currentMethod.toUpperCase());
+                    System.out.printf("[%s 文件成功]%n", optMethod.toUpperCase());
                     lastResult = "0";
                     break;
                 case "failed":
@@ -181,7 +175,7 @@ public class Frs {
                 case "success":
                 case "2":
                     if (!uploadResult.equals(lastResult)) {
-                        System.out.printf("[%s] 文件处理中%n", currentMethod.toUpperCase());
+                        System.out.printf("[%s] 文件处理中%n", optMethod.toUpperCase());
                         lastResult = "2";
                     }
                     break;
@@ -228,7 +222,7 @@ public class Frs {
                 System.err.print("[FAILED] [PUT] UUID错误\n");
                 break;
             case "-107":
-                System.err.printf("[FAILED] [%s] 目的服务器异常%n", currentMethod.toUpperCase());
+                System.err.printf("[FAILED] [%s] 目的服务器异常%n", method.toUpperCase());
                 break;
             case "-109":
                 System.err.print("[FAILED] [PUT] 文件格式已被禁止上传\n");
