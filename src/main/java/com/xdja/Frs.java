@@ -12,6 +12,8 @@ import org.apache.commons.net.ftp.FTPReply;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.Serializable;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
@@ -141,6 +143,7 @@ public class Frs {
 
     @SneakyThrows
     private static FileExchangeInfo request(String header) {
+        header = URLEncoder.encode(header, StandardCharsets.UTF_8.name());
         String down = "down";
         String url = String.format("http://%s:%s/file_exchange.php", host, SERVER_PORT);
         if (down.equalsIgnoreCase(method)) {
@@ -200,6 +203,8 @@ public class Frs {
     private static void failed(String failedCode) {
         switch (failedCode) {
             case "-101":
+                System.err.print("[FAILED] [PUT] HTTP请求报文头的关键值错误, 检查UUID, 文件名等参数\n");
+                break;
             case "-106":
                 System.err.print("[FAILED] [PUT] unique_id 错误\n");
                 break;
@@ -257,7 +262,7 @@ public class Frs {
         ftp.changeWorkingDirectory("");
         ftp.setFileType(FTP.BINARY_FILE_TYPE);
         try (FileInputStream fileInputStream = new FileInputStream(absoluteFileName)) {
-            if (!ftp.storeFile(fileName, fileInputStream)) {
+            if (!ftp.storeFile(new String(fileName.getBytes(), StandardCharsets.ISO_8859_1), fileInputStream)) {
                 System.err.print("[FTP]写入文件失败\n");
                 return false;
             }
