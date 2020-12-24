@@ -45,7 +45,7 @@ public class Frs {
     @SneakyThrows
     public static void main(String... args) {
         if (args.length == 0) {
-            System.out.print("java -jar frs.jar [front_ip] [UUID] [get|put] [file_name] [protocol]\n");
+            System.out.print("java -jar frs.jar [front_ip] [UUID] [get|put] [file_name]\n");
         } else {
             long start = System.currentTimeMillis();
             run(args);
