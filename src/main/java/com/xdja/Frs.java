@@ -28,6 +28,7 @@ public class Frs {
 
     private static final Pattern DEALING = Pattern.compile("^success$|^2$");
     private static final Pattern PUT_GET = Pattern.compile("^put$|^get$");
+    private static final Pattern NORMAL_NAME_PATTERN = Pattern.compile("[a-zA-Z_\\d\\-.=;]*");
 
     private static String host = "localhost";
     private static final String SERVER_PORT = "8080";
@@ -137,13 +138,13 @@ public class Frs {
         request(getHeader(method));
     }
 
+    @SneakyThrows
     private static String getHeader(String method) {
-        return String.format("Uuid=%s;FileName=%s;Md5Sum=%s;protol=%s;Type=%s", uuid, fileName, md5Sum, protocol, method);
+        return String.format("Uuid=%s;FileName=%s;Md5Sum=%s;protol=%s;Type=%s", uuid, NORMAL_NAME_PATTERN.matcher(fileName).matches() ? fileName : URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()), md5Sum, protocol, method);
     }
 
     @SneakyThrows
     private static FileExchangeInfo request(String header) {
-        header = URLEncoder.encode(header, StandardCharsets.UTF_8.name());
         String down = "down";
         String url = String.format("http://%s:%s/file_exchange.php", host, SERVER_PORT);
         if (down.equalsIgnoreCase(method)) {
