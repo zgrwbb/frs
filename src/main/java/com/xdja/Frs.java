@@ -1,6 +1,9 @@
 package com.xdja;
 
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.lang.Console;
 import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.annotation.JSONField;
 import lombok.Data;
@@ -18,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 /**
@@ -50,6 +54,7 @@ public class Frs {
             long start = System.currentTimeMillis();
             run(args);
             System.out.printf("cost %sms%n", System.currentTimeMillis() - start);
+            System.exit(0);
         }
     }
 
@@ -108,9 +113,10 @@ public class Frs {
         FileExchangeInfo fileExchangeInfo = new FileExchangeInfo();
         String fileAbsolutePath = "./" + fileName.substring(fileName.lastIndexOf(File.separator) + 1);
         long start = System.currentTimeMillis();
+        Future<String> future = ThreadPool.executor().submit(() -> md5(Files.readAllBytes(Paths.get(fileAbsolutePath))));
         if (upload(fileAbsolutePath)) {
+            md5Sum = future.get();
             System.out.printf("[FTP] 上传文件到前置 - 耗时: %sms%n", System.currentTimeMillis() - start);
-            md5Sum = md5(Files.readAllBytes(Paths.get(fileAbsolutePath)));
             fileExchangeInfo = request(getHeader(method));
         }
         return fileExchangeInfo;
@@ -152,9 +158,14 @@ public class Frs {
             if (!downFile.exists()) {
                 downFile.mkdirs();
             }
-            final byte[] responseBytes = HttpRequest.get(url).header("xdja_auth", header).execute().bodyBytes();
-            Files.write(Paths.get(down + File.separator + fileName.substring(fileName.lastIndexOf(File.separator) + 1)), responseBytes);
-            System.out.printf("[DOWN] 文件成功, 位于./down/%s%n", fileName.substring(fileName.lastIndexOf(File.separator) + 1));
+            String downloadPath = down + File.separator + fileName.substring(fileName.lastIndexOf(File.separator) + 1);
+            HttpResponse response = HttpRequest.get(url).header("xdja_auth", header).executeAsync();
+            if (!response.isOk()) {
+                final String responseStr = response.body();
+                return result(JSON.parseObject(JSON.toJSONString(JSON.parseObject(responseStr).get("result")), FileExchangeInfo.class));
+            }
+            response.writeBody(FileUtil.file(downloadPath));
+            Console.log("[DOWN] 文件成功, 位于./down/{}\n", fileName.substring(fileName.lastIndexOf(File.separator) + 1));
             return new FileExchangeInfo();
         } else {
             final String responseStr = HttpRequest.get(url).header("xdja_auth", header).execute().body();
