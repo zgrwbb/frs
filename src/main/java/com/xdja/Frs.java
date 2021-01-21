@@ -146,6 +146,7 @@ public class Frs {
 
     @SneakyThrows
     private static String getHeader(String method) {
+        // xdja_auth:Uuid=8165163ba8c7654b;FileName=test.txt;Md5Sum=68fdbc9205f60ee9d4d3313df8fb8395;Dst-Ip-Port=11.12.107.7:21;protol=ftp
         return String.format("Uuid=%s;FileName=%s;Md5Sum=%s;protol=%s;Type=%s", uuid, NORMAL_NAME_PATTERN.matcher(fileName).matches() ? fileName : URLEncoder.encode(fileName, StandardCharsets.UTF_8.name()), md5Sum, protocol, method);
     }
 
@@ -169,7 +170,7 @@ public class Frs {
             return new FileExchangeInfo();
         } else {
             final String responseStr = HttpRequest.get(url).header("xdja_auth", header).execute().body();
-            return result(JSON.parseObject(JSON.toJSONString(JSON.parseObject(responseStr).get("result")), FileExchangeInfo.class));
+            return result(JSON.parseObject(JSON.toJSONString(JSON.parseObject(responseStr)), FileExchangeInfo.class));
         }
     }
 
