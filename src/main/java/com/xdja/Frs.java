@@ -34,8 +34,7 @@ public class Frs {
     private static final Pattern PUT_GET = Pattern.compile("^put$|^get$");
     private static final Pattern NORMAL_NAME_PATTERN = Pattern.compile("[a-zA-Z_\\d\\-.=;]*");
 
-    private static String host = "localhost";
-    private static final String SERVER_PORT = "8080";
+    private static String host = "localhost:8080";
     private static String lastResult = "";
 
     private static String optMethod = "";
@@ -49,7 +48,7 @@ public class Frs {
     @SneakyThrows
     public static void main(String... args) {
         if (args.length == 0) {
-            System.out.print("java -jar frs.jar [front_ip] [UUID] [get|put] [file_name]\n");
+            System.out.print("java -jar frs.jar [ip:port] [UUID] [get|put] [filename]\n");
         } else {
             long start = System.currentTimeMillis();
             run(args);
@@ -153,7 +152,7 @@ public class Frs {
     @SneakyThrows
     private static FileExchangeInfo request(String header) {
         String down = "down";
-        String url = String.format("http://%s:%s/file_exchange.php", host, SERVER_PORT);
+        String url = String.format("http://%s/file_exchange.php", host);
         if (down.equalsIgnoreCase(method)) {
             File downFile = new File(down);
             if (!downFile.exists()) {
@@ -264,7 +263,7 @@ public class Frs {
         System.out.print("[FTP] 开始上传文件到前置\n");
         FTPClient ftp = new FTPClient();
         ftp.enterLocalPassiveMode();
-        ftp.connect(host, 21);
+        ftp.connect(host.split(":")[0], 21);
         ftp.login("xdja", "Ftp@123");
         int reply = ftp.getReplyCode();
         if (!FTPReply.isPositiveCompletion(reply)) {

@@ -4,15 +4,11 @@ package com.xdja;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author wenpeng
  */
 public class ThreadPool {
-
-    private static final AtomicInteger COUNT = new AtomicInteger(0);
-
 
     private ThreadPool() {
         throw new UnsupportedOperationException();
@@ -47,11 +43,7 @@ public class ThreadPool {
                     200,
                     TimeUnit.SECONDS,
                     new LinkedBlockingQueue<>(),
-                    r -> {
-                        Thread thread = new Thread(r);
-                        thread.setName(String.format("pool-%s", COUNT.getAndIncrement()));
-                        return thread;
-                    },
+                    r -> new Thread(r, String.format("pool-%s", executor().getActiveCount() + 1)),
                     new ThreadPoolExecutor.CallerRunsPolicy()
             );
         }
